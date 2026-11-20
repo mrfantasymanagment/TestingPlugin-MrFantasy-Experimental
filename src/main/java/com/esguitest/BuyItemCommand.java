@@ -3,19 +3,18 @@ package com.mrfantasy.esguitest;
 import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
 import me.gypopo.economyshopgui.providers.EconomyProvider;
 import me.gypopo.economyshopgui.objects.ShopItem;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -100,19 +99,18 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
         ItemStack toGive = shopItem.getItemToGive().clone();
         toGive.setAmount(amount);
 
-        // Espacio: se simula sobre una copia del inventario
-        Inventory sim = Bukkit.createInventory(null, 36);
-        ItemStack[] real = player.getInventory().getStorageContents();
-        for (int i = 0; i < real.length; i++) {
-            if (real[i] != null) sim.setItem(i, real[i].clone());
-        }
-        if (!sim.addItem(toGive.clone()).isEmpty()) {
-            player.sendMessage("§cNo tienes espacio suficiente en el inventario.");
-            return true;
-        }
-
         eco.withdrawBalance(player, price);
-        player.getInventory().addItem(toGive);
+
+        // Lo que no entre en el inventario se dropea a los pies del jugador
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(toGive);
+        int dropped = 0;
+        for (ItemStack left : leftovers.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), left);
+            dropped += left.getAmount();
+        }
+        if (dropped > 0) {
+            player.sendMessage("§eTu inventario está lleno: " + dropped + " items se dropearon al suelo.");
+        }
         player.sendMessage("§aComprado x" + amount + " " + mat.name().toLowerCase(Locale.ROOT)
                 + " por " + eco.formatPrice(price) + ".");
 
