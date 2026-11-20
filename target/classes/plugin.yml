@@ -3,3 +3,14 @@ version: 1.0.0
 main: com.mrfantasy.esguitest.ESGUITest
 api-version: "1.21.8"
 softdepend: [EconomyShopGUI, EconomyShopGUI-Premium]
+
+commands:
+  buyitem:
+    description: Compra un item de la tienda
+    usage: /<command> <item> [cantidad]
+    permission: esguitest.buyitem
+
+permissions:
+  esguitest.buyitem:
+    description: Permite usar /buyitem
+    default: true

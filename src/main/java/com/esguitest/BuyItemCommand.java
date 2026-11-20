@@ -90,9 +90,8 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
                 amount,
                 true,   // checkPermissions
                 true,   // checkRequirements
-                false,  // allowQuantityChange: si no entra todo, falla en vez de ajustar la cantidad
-                true,   // playerTriggered: ESGUI manda sus mensajes (éxito, sin espacio, sin fondos, sin stock) y sonidos
-                "BuyItemCommand"
+                false,  // allowQuantityChange
+                true    // playerTriggered
         );
 
         // 5. Resultados que ESGUI NO le avisa al jugador
