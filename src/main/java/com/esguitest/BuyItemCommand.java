@@ -1,7 +1,6 @@
 package com.mrfantasy.esguitest;
 
 import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
-import me.gypopo.economyshopgui.providers.EconomyProvider;
 import me.gypopo.economyshopgui.objects.ShopItem;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -14,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -84,38 +82,8 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 4. Compra manual (esta versión de ESGUI no tiene purchaseItem)
-        double price = EconomyShopGUIHook.getItemBuyPrice(shopItem, player, amount);
-        EconomyProvider eco = EconomyShopGUIHook.getEcon(shopItem.getEcoType());
-        if (eco == null) {
-            player.sendMessage("§cNo se encontró la economía de este item.");
-            return true;
-        }
-        if (eco.getBalance(player) < price) {
-            player.sendMessage("§cNo tienes fondos suficientes (necesitas " + eco.formatPrice(price) + ").");
-            return true;
-        }
-
-        ItemStack toGive = shopItem.getItemToGive().clone();
-        toGive.setAmount(amount);
-
-        eco.withdrawBalance(player, price);
-
-        // Lo que no entre en el inventario se dropea a los pies del jugador
-        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(toGive);
-        int dropped = 0;
-        for (ItemStack left : leftovers.values()) {
-            player.getWorld().dropItemNaturally(player.getLocation(), left);
-            dropped += left.getAmount();
-        }
-        if (dropped > 0) {
-            player.sendMessage("§eTu inventario está lleno: " + dropped + " items se dropearon al suelo.");
-        }
-        player.sendMessage("§aComprado x" + amount + " " + mat.name().toLowerCase(Locale.ROOT)
-                + " por " + eco.formatPrice(price) + ".");
-
-        plugin.getLogger().info("[BUYITEM] jugador=" + player.getName()
-                + " item=" + mat.name() + " cantidad=" + amount + " precio=" + price);
+        // 4. Compra manual (cobro + entrega + dropeo del exceso)
+        PurchaseService.purchase(plugin, player, shopItem, amount, "command");
         return true;
     }
 

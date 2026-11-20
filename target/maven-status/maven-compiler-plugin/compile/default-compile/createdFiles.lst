@@ -1,3 +1,4 @@
 com\mrfantasy\esguitest\ESGUITest.class
 com\mrfantasy\esguitest\TransactionListener.class
+com\mrfantasy\esguitest\PurchaseService.class
 com\mrfantasy\esguitest\BuyItemCommand.class
