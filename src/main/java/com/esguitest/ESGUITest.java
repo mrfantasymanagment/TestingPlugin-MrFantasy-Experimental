@@ -14,9 +14,6 @@ public class ESGUITest extends JavaPlugin {
             cmd.setExecutor(buyItem);
             cmd.setTabCompleter(buyItem);
         }
-        for (java.lang.reflect.Method m : me.gypopo.economyshopgui.api.EconomyShopGUIHook.class.getDeclaredMethods()) {
-            if (m.getName().equals("purchaseItem")) getLogger().info("API tiene: " + m);
-        }
 
         getLogger().info("GUITest Activo");
     }

@@ -1,14 +1,16 @@
 package com.mrfantasy.esguitest;
 
 import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
-import me.gypopo.economyshopgui.api.objects.TransactionResult;
+import me.gypopo.economyshopgui.providers.EconomyProvider;
 import me.gypopo.economyshopgui.objects.ShopItem;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Collections;
@@ -19,7 +21,7 @@ import java.util.stream.Stream;
 
 /**
  * /buyitem <item> [cantidad]
- * Compra un item de EconomyShopGUI delegando toda la transacción en la API.
+ * Compra un item de EconomyShopGUI de forma manual con la API (sin purchaseItem).
  */
 public class BuyItemCommand implements CommandExecutor, TabCompleter {
 
@@ -83,37 +85,39 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 4. Transacción completa a cargo de EconomyShopGUI
-        TransactionResult result = EconomyShopGUIHook.purchaseItem(
-                player,
-                shopItem,
-                amount,
-                true,   // checkPermissions
-                true,   // checkRequirements
-                false,  // allowQuantityChange
-                true    // playerTriggered
-        );
-
-        // 5. Resultados que ESGUI NO le avisa al jugador
-        switch (result.getResult()) {
-            case SUCCESS, SUCCESS_COMMANDS_EXECUTED,
-                 INSUFFICIENT_FUNDS, NO_INVENTORY_SPACE, NO_ITEM_STOCK_LEFT -> { /* ya notificado por ESGUI */ }
-            case NO_PERMISSIONS -> player.sendMessage("§cNo tienes permiso para comprar ese item.");
-            case REQUIREMENTS_FAILED -> player.sendMessage("§cNo cumples los requisitos para comprar ese item.");
-            case TO_MANY_ITEMS -> player.sendMessage("§cEsa cantidad supera el máximo de compra permitido para este item.");
-            case NOT_ENOUGH_ITEMS -> player.sendMessage("§cEsa cantidad es menor al mínimo de compra de este item.");
-            case TRANSACTION_CANCELLED -> player.sendMessage("§cLa compra fue cancelada.");
-            case ITEM_ERROR, DISPLAY_ITEM, NEGATIVE_ITEM_PRICE ->
-                    player.sendMessage("§cEse item no está disponible para compra.");
-            default -> player.sendMessage("§cNo se pudo completar la compra (" + result.getResult() + ").");
+        // 4. Compra manual (esta versión de ESGUI no tiene purchaseItem)
+        double price = EconomyShopGUIHook.getItemBuyPrice(shopItem, player, amount);
+        EconomyProvider eco = EconomyShopGUIHook.getEcon(shopItem.getEcoType());
+        if (eco == null) {
+            player.sendMessage("§cNo se encontró la economía de este item.");
+            return true;
+        }
+        if (eco.getBalance(player) < price) {
+            player.sendMessage("§cNo tienes fondos suficientes (necesitas " + eco.formatPrice(price) + ").");
+            return true;
         }
 
+        ItemStack toGive = shopItem.getItemToGive().clone();
+        toGive.setAmount(amount);
+
+        // Espacio: se simula sobre una copia del inventario
+        Inventory sim = Bukkit.createInventory(null, 36);
+        ItemStack[] real = player.getInventory().getStorageContents();
+        for (int i = 0; i < real.length; i++) {
+            if (real[i] != null) sim.setItem(i, real[i].clone());
+        }
+        if (!sim.addItem(toGive.clone()).isEmpty()) {
+            player.sendMessage("§cNo tienes espacio suficiente en el inventario.");
+            return true;
+        }
+
+        eco.withdrawBalance(player, price);
+        player.getInventory().addItem(toGive);
+        player.sendMessage("§aComprado x" + amount + " " + mat.name().toLowerCase(Locale.ROOT)
+                + " por " + eco.formatPrice(price) + ".");
+
         plugin.getLogger().info("[BUYITEM] jugador=" + player.getName()
-                + " item=" + mat.name()
-                + " pedido=" + amount
-                + " resultado=" + result.getResult()
-                + " entregado=" + result.getAmount()
-                + " precios=" + result.getPrices());
+                + " item=" + mat.name() + " cantidad=" + amount + " precio=" + price);
         return true;
     }
 
