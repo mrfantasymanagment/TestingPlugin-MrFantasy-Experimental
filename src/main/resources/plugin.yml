@@ -1,0 +1,5 @@
+name: ESGUITest
+version: 1.0.0
+main: com.mrfantasy.esguitest.ESGUITest
+api-version: "1.21.8"
+softdepend: [EconomyShopGUI, EconomyShopGUI-Premium]
