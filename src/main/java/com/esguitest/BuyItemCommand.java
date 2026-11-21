@@ -19,13 +19,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * /buyitem <item> [cantidad]
+ * /buyitem <item> [cantidad] [items|stacks]
  * Compra un item de EconomyShopGUI de forma manual con la API (sin purchaseItem).
  */
 public class BuyItemCommand implements CommandExecutor, TabCompleter {
 
     // Tope de seguridad: un inventario completo de stacks de 64
     private static final int MAX_AMOUNT = 36 * 64;
+
+    // ESGUI compra "por stacks" de 64 aunque el item stackee menos (igual que su pantalla de stacks)
+    private static final int STACK_SIZE = 64;
 
     private final ESGUITest plugin;
 
@@ -39,8 +42,8 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("Solo jugadores pueden usar este comando.");
             return true;
         }
-        if (args.length < 1 || args.length > 2) {
-            player.sendMessage("§cUso: /" + label + " <item> [cantidad]");
+        if (args.length < 1 || args.length > 3) {
+            player.sendMessage("§cUso: /" + label + " <item> [cantidad] [items|stacks]");
             return true;
         }
 
@@ -53,7 +56,7 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
 
         // 2. Cantidad
         int amount = 1;
-        if (args.length == 2) {
+        if (args.length >= 2) {
             try {
                 amount = Integer.parseInt(args[1]);
             } catch (NumberFormatException e) {
@@ -64,6 +67,19 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
         if (amount < 1 || amount > MAX_AMOUNT) {
             player.sendMessage("§cLa cantidad debe estar entre 1 y " + MAX_AMOUNT + ".");
             return true;
+        }
+
+        // 2b. Unidad (opcional): items (por defecto) o stacks
+        boolean stacks = false;
+        if (args.length == 3) {
+            switch (args[2].toLowerCase(Locale.ROOT)) {
+                case "items", "item" -> stacks = false;
+                case "stacks", "stack" -> stacks = true;
+                default -> {
+                    player.sendMessage("§cLa unidad debe ser 'items' o 'stacks'.");
+                    return true;
+                }
+            }
         }
 
         // 3. Buscar el item en la tienda (sin jugador = solo "¿existe?")
@@ -81,6 +97,15 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
         }
         if (!EconomyShopGUIHook.isBuyAble(shopItem)) {
             player.sendMessage("§cEse item no se puede comprar.");
+            return true;
+        }
+
+        // Si la unidad son stacks, convertir a items (1 stack = 64, como en ESGUI)
+        if (stacks) {
+            amount *= STACK_SIZE;
+        }
+        if (amount > MAX_AMOUNT) {
+            player.sendMessage("§cEl total (" + amount + " items) supera el máximo de " + MAX_AMOUNT + ".");
             return true;
         }
 
@@ -138,7 +163,10 @@ public class BuyItemCommand implements CommandExecutor, TabCompleter {
                     .collect(Collectors.toList());
         }
         if (args.length == 2) {
-            return List.of("1", "16", "32", "64");
+            return List.of("1", "2", "16", "32", "64");
+        }
+        if (args.length == 3) {
+            return List.of("items", "stacks");
         }
         return Collections.emptyList();
     }
